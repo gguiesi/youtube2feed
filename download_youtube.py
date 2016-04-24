@@ -78,20 +78,17 @@ class YdlDownloader:
             'preferredcodec': 'mp3',
             'preferredquality': '128',
         }],
-        'outtmpl': '/Users/guiesi/Downloads/youtube/%(uploader)s/' +
-        '%(upload_date)s-%(title)s.%(ext)s',
+        'outtmpl': 'youtube/%(uploader)s/' +
+        '%(upload_date)s-%(id)s.%(ext)s',
         'download_archive': 'download_archive',
         'logger': MyLogger(),
         'progress_hooks': [my_hook],
-        'restrictfilename': True
     }
 
     def save_episode_data(self, content):
         print '\nsave_episode_data:\n %s\n' % content
         channel = self.db.get_channel_by_name(content[u'uploader'])
         if channel is None:
-            #if u'thumbnail' not in content.keys():
-            #    content[u'thumbnail'] =
             self.db.insert_channel(content)
             channel = self.db.get_channel_by_name(content[u'uploader'])
             print 'channel:', channel
@@ -101,8 +98,7 @@ class YdlDownloader:
     def download(self, lst):
         with youtube_dl.YoutubeDL(YdlDownloader.ydl_opts) as ydl:
             for i in self.urls:
-                t = ydl.extract_info(i, download=False)
-                # print '\nentries:\n %s \n' % t[u'entries']
+                t = ydl.extract_info(i, download=True)
                 # episode download
                 if u'uploader' in t:
                     print '\ngrava ep fora do entries:', t
