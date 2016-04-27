@@ -22,6 +22,27 @@ class Cursor:
         self.cur = self.conn.cursor()
         # enable foreign keys
         self.cur.execute('''PRAGMA foreign_keys = ON''')
+        self.__create_db()
+
+    def __create_db(self):
+        sql_episode = '''CREATE TABLE IF NOT EXISTS "episode" (
+                    `id`    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+                    `title` TEXT NOT NULL,
+                    `pub_date`  TEXT NOT NULL,
+                    `url`   TEXT NOT NULL UNIQUE,
+                    `channel_id`    INTEGER NOT NULL,
+                    `flg_feed`  NUMERIC NOT NULL DEFAULT 0,
+                    FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`) ON DELETE CASCADE
+                )'''
+        sql_channel = '''CREATE TABLE IF NOT EXISTS "channel" (
+                    `id`    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
+                    `name`  TEXT NOT NULL UNIQUE,
+                    `url`   TEXT NOT NULL UNIQUE,
+                    `image_url` TEXT NOT NULL
+                )'''
+        self.cur.execute(sql_channel)
+        self.cur.execute(sql_episode)
+        self.conn.commit()
 
     def get_channels(self):
         sql = '''select * from channel'''
@@ -45,7 +66,7 @@ class Cursor:
         sql = '''select * from episode where channel_id = ? order by
         pub_date desc'''
         return self.cur.execute(sql, (channel_id,)).fetchall()
-
+        
     def insert_episode(self, content):
         sql = '''insert into episode (title, pub_date, url, channel_id)
         values (?, ?, ?, ?)'''
@@ -61,7 +82,7 @@ class Cursor:
         print sql, title, pub_date, url, content[u'channel_id']
         self.cur.execute(sql, (title, pub_date, url, content[u'channel_id']))
         self.conn.commit()
-
+        
 
 class YdlDownloader:
     def my_hook(d):
@@ -93,7 +114,10 @@ class YdlDownloader:
             channel = self.db.get_channel_by_name(content[u'uploader'])
             # print 'channel:', channel
         content[u'channel_id'] = channel[0]
-        self.db.insert_episode(content)
+        try:
+            self.db.insert_episode(content)
+        except sqlite3.IntegrityError as e:
+            print 'ERROR ON SAVE EPISODE: ', e.message
 
     def download(self, lst):
         with youtube_dl.YoutubeDL(YdlDownloader.ydl_opts) as ydl:
