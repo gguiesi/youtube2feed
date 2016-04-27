@@ -29,16 +29,19 @@ class Cursor:
                     `id`    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
                     `title` TEXT NOT NULL,
                     `pub_date`  TEXT NOT NULL,
+                    `webpage_url` TEXT NOT NULL UNIQUE,
                     `url`   TEXT NOT NULL UNIQUE,
                     `channel_id`    INTEGER NOT NULL,
                     `flg_feed`  NUMERIC NOT NULL DEFAULT 0,
+                    `last_update` TEXT NOT NULL,
                     FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`) ON DELETE CASCADE
                 )'''
         sql_channel = '''CREATE TABLE IF NOT EXISTS "channel" (
                     `id`    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
                     `name`  TEXT NOT NULL UNIQUE,
                     `url`   TEXT NOT NULL UNIQUE,
-                    `image_url` TEXT NOT NULL
+                    `image_url` TEXT NOT NULL,
+                    `last_update` TEXT NOT NULL
                 )'''
         self.cur.execute(sql_channel)
         self.cur.execute(sql_episode)
@@ -54,8 +57,8 @@ class Cursor:
         return self.cur.fetchone()
 
     def insert_channel(self, content):
-        sql = '''insert into channel (name, url, image_url)
-        values (?, ?, ?)'''
+        sql = '''insert into channel (name, url, image_url, last_update)
+        values (?, ?, ?, datetime('now', 'localtime'))'''
         print sql, content[u'uploader'], content[u'uploader_url'],
         content[u'thumbnail']
         self.cur.execute(sql, (content[u'uploader'], content[u'uploader_url'],
@@ -68,19 +71,20 @@ class Cursor:
         return self.cur.execute(sql, (channel_id,)).fetchall()
 
     def insert_episode(self, content):
-        sql = '''insert into episode (title, pub_date, url, channel_id)
-        values (?, ?, ?, ?)'''
+        sql = '''insert into episode (title, pub_date, webpage_url, url, channel_id, last_update)
+        values (?, ?, ?, ?, ?, datetime('now', 'localtime'))'''
         title = content[u'title'].replace(':', ' -')
         host_ip = str(socket.gethostbyname(socket.getfqdn()))
         uploader = content[u'uploader']
+        webpage_url = content[u'webpage_url']
         upload_date = content[u'upload_date']
         id = content[u'id']
         ext = YdlDownloader.ydl_opts[u'postprocessors'][0][u'preferredcodec']
         url = 'http://%s:8000/youtube/%s/%s-%s.%s' % (host_ip, uploader,
                                                       upload_date, id, ext)
         pub_date = datetime.strptime(upload_date, '%Y%m%d')
-        print sql, title, pub_date, url, content[u'channel_id']
-        self.cur.execute(sql, (title, pub_date, url, content[u'channel_id']))
+        print sql, title, pub_date, webpage_url, url, content[u'channel_id']
+        self.cur.execute(sql, (title, pub_date, webpage_url, url, content[u'channel_id']))
         self.conn.commit()
 
 
