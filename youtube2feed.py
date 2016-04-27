@@ -1,5 +1,8 @@
 from __future__ import unicode_literals
 from datetime import datetime
+from xml.etree.ElementTree import Element, SubElement
+from xml.dom import minidom
+from xml.etree import ElementTree
 import youtube_dl
 import socket
 import sqlite3
@@ -34,7 +37,8 @@ class Cursor:
                     `channel_id`    INTEGER NOT NULL,
                     `flg_feed`  NUMERIC NOT NULL DEFAULT 0,
                     `last_update` TEXT NOT NULL,
-                    FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`) ON DELETE CASCADE
+                    FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`)
+                    ON DELETE CASCADE
                 )'''
         sql_channel = '''CREATE TABLE IF NOT EXISTS "channel" (
                     `id`    INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
@@ -71,8 +75,9 @@ class Cursor:
         return self.cur.execute(sql, (channel_id,)).fetchall()
 
     def insert_episode(self, content):
-        sql = '''insert into episode (title, pub_date, webpage_url, url, channel_id, last_update)
-        values (?, ?, ?, ?, ?, datetime('now', 'localtime'))'''
+        sql = '''insert into episode (title, pub_date, webpage_url, url,
+        channel_id, last_update) values (?, ?, ?, ?, ?,
+        datetime('now', 'localtime'))'''
         title = content[u'title'].replace(':', ' -')
         host_ip = str(socket.gethostbyname(socket.getfqdn()))
         uploader = content[u'uploader']
@@ -84,7 +89,8 @@ class Cursor:
                                                       upload_date, id, ext)
         pub_date = datetime.strptime(upload_date, '%Y%m%d')
         print sql, title, pub_date, webpage_url, url, content[u'channel_id']
-        self.cur.execute(sql, (title, pub_date, webpage_url, url, content[u'channel_id']))
+        self.cur.execute(sql, (title, pub_date, webpage_url, url,
+                               content[u'channel_id']))
         self.conn.commit()
 
 
@@ -136,3 +142,73 @@ class YdlDownloader:
                     for e in t[u'entries']:
                         print '\ngrava ep', e
                         self.save_episode_data(e)
+
+
+class Feed:
+    def __init__(self):
+        self.cursor = Cursor()
+        # self.create_feeds()
+
+    def __prettify(self, elem):
+        """
+        Return a pretty-printed XML string for the Element
+        """
+        rough_string = ElementTree.tostring(elem, 'utf-8')
+        reparsed = minidom.parseString(rough_string)
+        return reparsed.toprettyxml(indent='    ').encode('utf-8')
+
+    def create_feeds(self):
+        channels = self.cursor.get_channels()
+        for channel in channels:
+            xml = self.__get_channel(channel)
+            file = open('%s.xml' % channel[1], 'w')
+            file.write(self.__prettify(xml))
+
+    def __get_channel(self, channel):
+        channel_id = channel[0]
+        channel_name = channel[1]
+        channel_link = channel[2]
+        channel_url_img = channel[3]
+
+        rss = Element('rss')
+        rss.set('version', '2.0')
+        channel = SubElement(rss, 'channel')
+        title = SubElement(channel, 'title')
+        title.text = channel_name
+        link = SubElement(channel, 'link')
+        link.text = channel_link
+        last_build_date = SubElement(channel, 'lastBuildDate')
+        last_build_date.text = datetime.now().strftime('%a, %d %b %Y ' +
+                                                       '%H:%M:%S %z')
+        image = SubElement(channel, 'image')
+        img_link = SubElement(image, 'link')
+        img_link.text = channel_link
+        img_url = SubElement(image, 'url')
+        img_url.text = channel_url_img
+        img_title = SubElement(image, 'title')
+        img_title.text = channel_name
+        self.__get_items(channel,
+                         self.cursor.get_episodes_by_channel_id(channel_id))
+
+        return rss
+
+    def __get_items(self, root_element, items):
+        for i in items:
+            t = i[1]
+            pd = datetime.strptime(i[2], '%Y-%m-%d %H:%M:%S').\
+                strftime('%a, %d %b %Y %H:%M:%S %z')
+            webpage_url = i[3]
+            url = i[4]
+
+            item = SubElement(root_element, 'item')
+            title = SubElement(item, 'title')
+            title.text = t
+            pub_date = SubElement(item, 'pubDate')
+            pub_date.text = pd
+            link = SubElement(item, 'link')
+            link.text = webpage_url
+            e = {}
+            e['url'] = url
+            e['length'] = '0'
+            e['type'] = 'audio/mpeg'
+            SubElement(item, 'enclosure', e)
