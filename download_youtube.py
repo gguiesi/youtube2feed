@@ -20,6 +20,8 @@ class Cursor:
     def __init__(self):
         self.conn = sqlite3.connect('youtube2feed.db')
         self.cur = self.conn.cursor()
+        # enable foreign keys
+        self.cur.execute('''PRAGMA foreign_keys = ON''')
 
     def get_channels(self):
         sql = '''select * from channel'''
@@ -51,11 +53,10 @@ class Cursor:
         host_ip = str(socket.gethostbyname(socket.getfqdn()))
         uploader = content[u'uploader']
         upload_date = content[u'upload_date']
-        title = content[u'title'].replace(':', ' -')
+        id = content[u'id']
         ext = YdlDownloader.ydl_opts[u'postprocessors'][0][u'preferredcodec']
-        url = 'http://%s:8000/youtube/%s/%s - %s.%s' % (host_ip, uploader,
-                                                        upload_date, title,
-                                                        ext)
+        url = 'http://%s:8000/youtube/%s/%s-%s.%s' % (host_ip, uploader,
+                                                      upload_date, id, ext)
         pub_date = datetime.strptime(upload_date, '%Y%m%d')
         print sql, title, pub_date, url, content[u'channel_id']
         self.cur.execute(sql, (title, pub_date, url, content[u'channel_id']))
@@ -63,10 +64,6 @@ class Cursor:
 
 
 class YdlDownloader:
-    def __init__(self, urls):
-        self.urls = urls
-        self.db = Cursor()
-
     def my_hook(d):
         if d['status'] == 'finished':
             print 'Done downloading, now converting ...'
@@ -78,33 +75,36 @@ class YdlDownloader:
             'preferredcodec': 'mp3',
             'preferredquality': '128',
         }],
-        'outtmpl': 'youtube/%(uploader)s/' +
-        '%(upload_date)s-%(id)s.%(ext)s',
-        'download_archive': 'download_archive',
+        'outtmpl': 'youtube/%(uploader)s/%(upload_date)s-%(id)s.%(ext)s',
+        'download_archive': 'download_archive2',
         'logger': MyLogger(),
         'progress_hooks': [my_hook],
     }
 
+    def __init__(self, urls):
+        self.urls = urls
+        self.db = Cursor()
+
     def save_episode_data(self, content):
-        print '\nsave_episode_data:\n %s\n' % content
+        # print '\nsave_episode_data:\n %s\n' % content
         channel = self.db.get_channel_by_name(content[u'uploader'])
         if channel is None:
             self.db.insert_channel(content)
             channel = self.db.get_channel_by_name(content[u'uploader'])
-            print 'channel:', channel
+            # print 'channel:', channel
         content[u'channel_id'] = channel[0]
         self.db.insert_episode(content)
 
     def download(self, lst):
         with youtube_dl.YoutubeDL(YdlDownloader.ydl_opts) as ydl:
             for i in self.urls:
-                t = ydl.extract_info(i, download=True)
+                t = ydl.extract_info(i, download=False)
                 # episode download
                 if u'uploader' in t:
                     print '\ngrava ep fora do entries:', t
                     self.save_episode_data(t)
                 # channel download
-                if len(t[u'entries']) > 0:
+                elif len(t[u'entries']) > 0:
                     for e in t[u'entries']:
                         print '\ngrava ep', e
                         self.save_episode_data(e)
