@@ -66,7 +66,7 @@ class Cursor:
         sql = '''select * from episode where channel_id = ? order by
         pub_date desc'''
         return self.cur.execute(sql, (channel_id,)).fetchall()
-        
+
     def insert_episode(self, content):
         sql = '''insert into episode (title, pub_date, url, channel_id)
         values (?, ?, ?, ?)'''
@@ -82,7 +82,7 @@ class Cursor:
         print sql, title, pub_date, url, content[u'channel_id']
         self.cur.execute(sql, (title, pub_date, url, content[u'channel_id']))
         self.conn.commit()
-        
+
 
 class YdlDownloader:
     def my_hook(d):
@@ -97,7 +97,7 @@ class YdlDownloader:
             'preferredquality': '128',
         }],
         'outtmpl': 'youtube/%(uploader)s/%(upload_date)s-%(id)s.%(ext)s',
-        'download_archive': 'download_archive2',
+        'download_archive': 'download_archive',
         'logger': MyLogger(),
         'progress_hooks': [my_hook],
     }
