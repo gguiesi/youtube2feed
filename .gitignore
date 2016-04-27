@@ -1,3 +1,5 @@
 .idea/
 .ropeproject/
 *.pyc
+youtube/
+./db_backup/
