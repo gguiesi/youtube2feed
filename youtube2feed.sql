@@ -4,8 +4,9 @@ CREATE TABLE "episode" (
 	`title`	TEXT NOT NULL,
 	`pub_date`	TEXT NOT NULL,
 	`url`	TEXT NOT NULL UNIQUE,
-	`channel_id`	TEXT NOT NULL,
-	`flg_feed`	NUMERIC NOT NULL DEFAULT 0
+	`channel_id`	INTEGER NOT NULL,
+	`flg_feed`	NUMERIC NOT NULL DEFAULT 0,
+	FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`) ON DELETE CASCADE
 );
 CREATE TABLE "channel" (
 	`id`	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE,
