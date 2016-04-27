@@ -2,4 +2,6 @@
 .ropeproject/
 *.pyc
 youtube/
-./db_backup/
+db_backup/
+*.db
+download_archive
