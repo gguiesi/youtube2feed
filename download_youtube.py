@@ -122,7 +122,7 @@ class YdlDownloader:
     def download(self, lst):
         with youtube_dl.YoutubeDL(YdlDownloader.ydl_opts) as ydl:
             for i in self.urls:
-                t = ydl.extract_info(i, download=False)
+                t = ydl.extract_info(i, download=True)
                 # episode download
                 if u'uploader' in t:
                     print '\ngrava ep fora do entries:', t
