@@ -72,7 +72,7 @@ class Cursor:
     def update_channel(self, content):
         sql = '''update channel set image_url = ? where id = ?'''
         self.cur.execute(sql, (content[u'id'], content[u'thumbnail']))
-        self.__init__conn.commit()
+        self.conn.commit()
 
     def get_episodes_by_channel_id(self, channel_id):
         sql = '''select * from episode where channel_id = ? order by
