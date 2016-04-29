@@ -69,6 +69,11 @@ class Cursor:
                                content[u'thumbnail'],))
         self.conn.commit()
 
+    def update_channel(self, content):
+        sql = '''update channel set image_url = ? where id = ?'''
+        self.cur.execute(sql, (content[u'id'], content[u'thumbnail']))
+        self.__init__conn.commit()
+
     def get_episodes_by_channel_id(self, channel_id):
         sql = '''select * from episode where channel_id = ? order by
         pub_date desc'''
@@ -123,6 +128,9 @@ class YdlDownloader:
             self.db.insert_channel(content)
             channel = self.db.get_channel_by_name(content[u'uploader'])
             # print 'channel:', channel
+        else:
+            content[u'id'] = channel[0]
+            self.db.update_channel(content)
         content[u'channel_id'] = channel[0]
         try:
             self.db.insert_episode(content)
