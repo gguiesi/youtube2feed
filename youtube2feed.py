@@ -63,7 +63,7 @@ class Cursor:
     def insert_channel(self, content):
         sql = '''insert into channel (name, url, image_url, last_update)
         values (?, ?, ?, datetime('now', 'localtime'))'''
-        print sql, content[u'uploader'], content[u'uploader_url'],
+        print '\ninsert_channel:\n', sql, content[u'uploader'], content[u'uploader_url'],
         content[u'thumbnail']
         self.cur.execute(sql, (content[u'uploader'], content[u'uploader_url'],
                                content[u'thumbnail'],))
@@ -71,6 +71,7 @@ class Cursor:
 
     def update_channel(self, content):
         sql = '''update channel set image_url = ? where id = ?'''
+        print '\nupdate_channel:\n', sql, content[u'id'], content[u'thumbnail']
         self.cur.execute(sql, (content[u'id'], content[u'thumbnail']))
         self.conn.commit()
 
@@ -83,6 +84,7 @@ class Cursor:
         sql = '''insert into episode (title, pub_date, webpage_url, url,
         channel_id, last_update) values (?, ?, ?, ?, ?,
         datetime('now', 'localtime'))'''
+        # print '\ncontent:\n', content
         title = content[u'title'].replace(':', ' -')
         host_ip = str(socket.gethostbyname(socket.getfqdn()))
         uploader = content[u'uploader']
@@ -129,8 +131,11 @@ class YdlDownloader:
             channel = self.db.get_channel_by_name(content[u'uploader'])
             # print 'channel:', channel
         else:
-            content[u'id'] = channel[0]
-            self.db.update_channel(content)
+            c = {}
+            # print '\ncontent:\n', content
+            c[u'id'] = channel[0]
+            c[u'thumbnail'] = content[u'thumbnail']
+            self.db.update_channel(c)
         content[u'channel_id'] = channel[0]
         try:
             self.db.insert_episode(content)
