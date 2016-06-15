@@ -87,13 +87,12 @@ class Cursor:
         # print '\ncontent:\n', content
         title = content[u'title'].replace(':', ' -')
         host_ip = str(socket.gethostbyname(socket.getfqdn()))
-        uploader = content[u'uploader']
+        uploader = content[u'uploader_id']
         webpage_url = content[u'webpage_url']
         upload_date = content[u'upload_date']
         id = content[u'id']
         ext = YdlDownloader.ydl_opts[u'postprocessors'][0][u'preferredcodec']
-        url = 'http://%s:8000/youtube/%s/%s-%s.%s' % (host_ip, uploader,
-                                                      upload_date, id, ext)
+        url = '/youtube/%s/%s-%s.%s' % (uploader, upload_date, id, ext)
         pub_date = datetime.strptime(upload_date, '%Y%m%d')
         print sql, title, pub_date, webpage_url, url, content[u'channel_id']
         self.cur.execute(sql, (title, pub_date, webpage_url, url,
@@ -113,7 +112,7 @@ class YdlDownloader:
             'preferredcodec': 'mp3',
             'preferredquality': '128',
         }],
-        'outtmpl': 'youtube/%(uploader)s/%(upload_date)s-%(id)s.%(ext)s',
+        'outtmpl': 'youtube/%(uploader_id)s/%(upload_date)s-%(id)s.%(ext)s',
         'download_archive': 'download_archive',
         'logger': MyLogger(),
         'progress_hooks': [my_hook],
@@ -211,7 +210,8 @@ class Feed:
             pd = datetime.strptime(i[2], '%Y-%m-%d %H:%M:%S').\
                 strftime('%a, %d %b %Y %H:%M:%S %z')
             webpage_url = i[3]
-            url = i[4]
+            host_ip = str(socket.gethostbyname(socket.getfqdn()))
+            url = 'http://%s:8000%s' % (host_ip, i[4])
 
             item = SubElement(root_element, 'item')
             title = SubElement(item, 'title')
